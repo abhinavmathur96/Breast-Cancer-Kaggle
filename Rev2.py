@@ -301,7 +301,8 @@ def prune(tree, test_data):
     least_error = evaluate_classification_error(tree, test_data)
     snips = 0
 
-    for i in bfs.reverse():
+    bfs.reverse()
+    for i in bfs:
         i.isLeaf = True
         error_partial = evaluate_classification_error(tree, test_data)
         if error_partial <= least_error:
