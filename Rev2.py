@@ -186,12 +186,12 @@ def create_pre_pruned(data, features, current_depth=0, max_depth=10,
         print 'Creating leaf node for right data'
         return node(isLeaf = True, splitting_feature = None,
                         split_value = None, data = right_split)
-    
+
     # Recurse on left and right subtrees
     left_tree = create_pre_pruned(left_split, features, current_depth+1, max_depth)
     right_tree = create_pre_pruned(right_split, features, current_depth+1, max_depth)
 
-    return node (
+    return node(
         isLeaf = False,
         splitting_feature = splitting_feature,
         split_value = split_value,
@@ -327,63 +327,66 @@ if __name__ == '__main__':
     print "Total number of tumors in new dataset    :", len(data)
     train_data, test_data = data.random_split(.8)
     target = 'diagnosis'
-    features = data.column_names()[2:]
+    features = data.column_names()[30:]
     
-    # Test function. SHould return perimeter_worst and its median
+    # Test function. Should return perimeter_worst and its median
     # print best_splitting_feature_gain(data, data.column_names()[2:], 'diagnosis', annotate=True)
 
     # Create a pre-pruned tree and save that model for later use
     time_pre = time.time()
-    model_pre_pruned = create_pre_pruned(data, features)
+    model_pre_pruned = create_pre_pruned(train_data, features)
     print 'Pre-pruned model took {} seconds'.format(time.time() - time_pre)
-    with open('model_pre_pruned.pkl', 'wb') as output:
-        pkl.dump(model_pre_pruned, output, -1)
+    # with open('model_pre_pruned.pkl', 'wb') as output:
+    #     pkl.dump(model_pre_pruned, output, -1)
     
-    # del model_pre_pruned
-    try:
-        with open('model_pre_pruned.pkl', 'rb') as inp:
-            model_pre_pruned = pkl.load(inp)
-    except Exception:
-        print 'Cannot read pre-pruned model binary file'
+    # # del model_pre_pruned
+    # try:
+    #     with open('model_pre_pruned.pkl', 'rb') as inp:
+    #         model_pre_pruned = pkl.load(inp)
+    # except Exception:
+    #     print 'Cannot read pre-pruned model binary file'
     
     # Create an unbounded tree for post-pruning later. Save the model
     time_unbounded = time.time()
-    model_unbounded = create_unbounded(data, features)
+    model_unbounded = create_unbounded(train_data, features)
     print 'Unbounded model took {} seconds'.format(time.time() - time_unbounded)
-    with open('model_unbounded.pkl', 'wb') as output:
-        pkl.dump(model_unbounded, output, -1)
+    # with open('model_unbounded.pkl', 'wb') as output:
+    #     pkl.dump(model_unbounded, output, -1)
     
-    # del model_unbounded
-    try:
-        with open('model_unbounded.pkl', 'rb') as inp:
-            model_unbounded = pkl.load(inp)
-    except Exception:
-        print 'Cannot read unbounded model binary file'
+    # # del model_unbounded
+    # try:
+    #     with open('model_unbounded.pkl', 'rb') as inp:
+    #         model_unbounded = pkl.load(inp)
+    # except Exception:
+    #     print 'Cannot read unbounded model binary file'
 
-    # Now prune the unbounded tree and save this too
+    # Now prune the unbounded tree wrt error in test_data and save this too
     time_post_pruned = time.time()
-    model_post_pruned = prune(model_unbounded, test_data)
+    model_post_pruned, least_error = prune(model_unbounded, test_data)
     print 'Pruning model took {} seconds'.format(time.time() - time_post_pruned)
-    with open('model_post_pruned.pkl', 'wb') as output:
-        pkl.dump(model_post_pruned, output, -1)
+    print 'Test error of pruned tree: %f' % least_error
+    # with open('model_post_pruned.pkl', 'wb') as output:
+    #     pkl.dump(model_post_pruned, output, -1)
     
-    # del model_post_pruned
-    try:
-        with open('model_post_pruned.pkl', 'rb') as inp:
-            model_post_pruned = pkl.load(inp)
-    except Exception:
-        print 'Cannot read post pruned model binary file'
+    # # del model_post_pruned
+    # try:
+    #     with open('model_post_pruned.pkl', 'rb') as inp:
+    #         model_post_pruned = pkl.load(inp)
+    # except Exception:
+    #     print 'Cannot read post pruned model binary file'
     
     # Let's try classifying some rows from the test_data
-    # Let's look at the first row in the test_data
+    # Let's look at a random row in the test_data
+    rand_choice = np.random.randint(0, len(test_data))
     print '----------------Test Data Row----------------------'
-    print test_data[0]
+    print test_data[rand_choice]
     print '---------------------------------------------------'
     # What does the post_pruned model say?
-    print classify(model_post_pruned, test_data[0], annotate=True)
+    print 'Post-pruned model says: %s' % classify(model_post_pruned, test_data[rand_choice], annotate=True)
     # What does the pre_pruned model say?
-    print classify(model_pre_pruned, test_data[0], annotate=True)
+    print 'Pre-pruned model says: %s' % classify(model_pre_pruned, test_data[rand_choice], annotate=True)
 
     # What is the overall classification error?
     print 'Pre-pruned: %f' % evaluate_classification_error(model_pre_pruned, data)
     print 'Post-pruned: %f' % evaluate_classification_error(model_post_pruned, data)
+    print 'Unbounded: %f' % evaluate_classification_error(model_unbounded, data)
