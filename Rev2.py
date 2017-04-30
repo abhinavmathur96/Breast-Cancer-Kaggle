@@ -1,7 +1,7 @@
 import numpy as np
 from graphlab import SFrame, cross_validation
 import pickle as pkl
-import time
+import time, copy
 
 class node(object):
     def __init__(self, isLeaf, splitting_feature, split_value, data,
@@ -286,7 +286,8 @@ def prune(tree, test_data):
     '''
     Prunes a pre-built tree. Returns pruned tree and least error encountered.
     '''
-    bfs = [tree]
+    tree_copy = copy.deepcopy(tree)
+    bfs = [tree_copy]
     bfs_iter = 0
 
     while(True):
@@ -298,20 +299,20 @@ def prune(tree, test_data):
             bfs.append(bfs[bfs_iter].rightChild)
         bfs_iter += 1
     
-    least_error = evaluate_classification_error(tree, test_data)
+    least_error = evaluate_classification_error(tree_copy, test_data)
     snips = 0
 
     bfs.reverse()
     for i in bfs:
         i.isLeaf = True
-        error_partial = evaluate_classification_error(tree, test_data)
+        error_partial = evaluate_classification_error(tree_copy, test_data)
         if error_partial <= least_error:
             least_error = error_partial
             snips += 1
         else:
             i.isLeaf = False
     print 'Made %d snips' % snips
-    return tree, least_error
+    return tree_copy, least_error
 
 if __name__ == '__main__':
     data = SFrame.read_csv('data.csv', column_type_hints = [str, str] + [float]*30)
@@ -327,7 +328,7 @@ if __name__ == '__main__':
     print "Total number of tumors in new dataset    :", len(data)
     train_data, test_data = data.random_split(.8)
     target = 'diagnosis'
-    features = data.column_names()[30:]
+    features = data.column_names()[2:]
     
     # Test function. Should return perimeter_worst and its median
     # print best_splitting_feature_gain(data, data.column_names()[2:], 'diagnosis', annotate=True)
